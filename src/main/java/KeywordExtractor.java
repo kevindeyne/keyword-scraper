@@ -4,26 +4,32 @@ import opennlp.tools.postag.POSTaggerME;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class KeywordExtractor {
 
-    public static Map<String, Integer> extract(Set<String> blindKeywords, String text) {
+    private static final String SPACE = " ";
+
+    public static Map<String, Integer> extract(String title, Set<String> blindKeywords, String text) {
         try (InputStream modelIn = KeywordExtractor.class.getResourceAsStream("/en-pos-maxent.bin")) {
             POSModel model = new POSModel(modelIn);
             POSTaggerME tagger = new POSTaggerME(model);
 
-            String[] split = text.split(" ");
+            String[] split = text.split(SPACE);
             String tags[] = tagger.tag(split);
+
+            int locationOfTitle = Arrays.stream(split).collect(Collectors.toList()).indexOf(ContentTrimmer.splitTitle(title).get(0));
 
             Map<String, Integer> result = new HashMap<>();
             for (int i = 0; i < tags.length; i++) {
+
                 if (acceptableTag(tags[i])) {
                     String key = cleanKey(split[i]);
                     if (acceptableKey(blindKeywords, key)) {
-                        if (result.get(key) == null) {
-                            result.put(key, 1);
-                        } else {
-                            result.put(key, result.get(key) + 1);
+                        //key += "["+tags[i]+"]";
+                        int distance = Math.abs(locationOfTitle - i);
+                        if (result.get(key) == null || result.get(key) > distance) {
+                            result.put(key, distance);
                         }
                     }
                 }
